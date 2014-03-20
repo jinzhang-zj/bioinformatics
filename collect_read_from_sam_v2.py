@@ -1,4 +1,4 @@
-#!/opt/apps/python/epd/7.2.2/bin/python
+#!/usr/bin/python
 
 '''Extract the reads mapped to the reference in given sam file
 
