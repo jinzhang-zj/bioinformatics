@@ -37,13 +37,9 @@ __license__ = "Python"
 
 import sys
 import argparse
-import os
 import numpy as np
 from collections import defaultdict
-from Bio import SeqIO
-from Bio.Seq import Seq
 from Bio.Blast import NCBIXML
-from Bio.Blast.Applications import NcbiblastxCommandline
 from Bio.Blast.Applications import NcbiblastpCommandline
 
 # the blast results will be in xml format since it's the most portable blast
@@ -60,6 +56,7 @@ if __name__ == "__main__":
 	parser.add_argument('-db', metavar='refdatabase', nargs=1, required=True, help='reference database path/name')
 	parser.add_argument('-p', metavar='projectname', nargs=1, required=True, help='project name used to name the output files')
 	parser.add_argument('-e', metavar='evalue', nargs=1, default=1e-10, help='blast evalue')
+	parser.add_argument('-cpu', metavar='cpu numbers', nargs=1, default=1, help='number of cores(threads) you want to use')
 		
 	args = parser.parse_args()	# take sys.args as default
 
@@ -70,15 +67,14 @@ if __name__ == "__main__":
 blastpcline = NcbiblastpCommandline(query=arglist['i'][0], db=arglist['db'][0], max_target_seqs=1, evalue=arglist['e'], outfmt=5, out=arglist['p'][0]+'.blastp.out')
 stdout,stderr =  blastpcline()
 
-
 # parsing the blast results
 result_handle = open(arglist['p'][0]+'.blastp.out')
 blast_records = NCBIXML.parse(result_handle)
 
-cont=defaultdict(int)
+cont=defaultdict(int)		# record contiguity for each gene
+comp_seg=defaultdict(set)	# record aligned hsp start and end position pairs
+ref = {}			# record reference length
 dbnum = 0;
-
-
 
 for blast_record in blast_records:
 	# skip the query if not hit was found
@@ -89,42 +85,59 @@ for blast_record in blast_records:
 	
 	if not dbnum:
 		dbnum = blast_record.database_sequences
-		print dbnum
 
 	cur_query = blast_record.query
 	
 	# each alignment corresponding to blast reuslts of one hit for the query
-	# here we are only interested in the top hit, or the first alignment results
+	# we are only interested in the top hit, or the first alignment results
 
 	alignment = blast_record.alignments[0]
-	cur_hit = alignment.title[:20]
-	cur_hit_length = alignment.length
+	cur_hit = alignment.title
+	ref[cur_hit] = alignment.length
 
 	# each hsp corresponds to blast results of one hsp of one hit for one query
-	# here we are only interested in the top hsp
+	# for contiguity we are only interested in the top hsp
+	# calculating contiguity for each contig
 	hsp = alignment.hsps[0]
 	align_length = hsp.sbjct_end - hsp.sbjct_start + 1
-	tmp_cont = align_length * 1.0 / cur_hit_length
-	
+	tmp_cont = align_length * 1.0 / ref[cur_hit]
 	if tmp_cont > cont[cur_hit]:
 		cont[cur_hit] = tmp_cont
 
-# contiguity output
-for cut in np.arange(0,1,0.1):
-	count = sum([1 for i in cont.values() if i > cut]) * 1.0 / dbnum
-	print str(cut) + ' ' + str(count)
+	# for contiguity we are interested in all hsps over the evalue cutoff
+	# calculating completeness for each contig
+	for hsp in alignment.hsps:
+		if hsp.expect > arglist['e']:
+			continue
+		tmp_tuple = (hsp.sbjct_start,  hsp.sbjct_end) if (hsp.sbjct_start < hsp.sbjct_end) else (hsp.sbjct_end, hsp.sbjct_start)
+		comp_seg[cur_hit].add(tmp_tuple)
 
 
 
+# summarize contiguity over all the references
+cont_counts = [0]*10
+for idx in range(10):
+	cont_counts[idx] = sum (1 for v in cont.values() if v*10 > idx) * 1.0/ dbnum
+
+# summarize completeness over all the references
+comp = defaultdict(int)
+
+for gene in comp_seg.keys():
+	# if only one hsp was found for the gene, completeness = contiguity
+	if len(comp_seg[gene]) == 1:
+		comp[gene] = cont[gene]
+	else:
+		marker = np.array([0]*ref[gene])
+		for (left, right) in comp_seg[gene]:
+			marker[left-1:right-1] = 1
+		comp[gene] = sum(marker) * 1.0 / ref[gene]		
+
+comp_counts = [0]*10
+for idx in range(10):
+	comp_counts[idx] = sum (1 for v in comp.values() if v*10 > idx) * 1.0/ dbnum
+
+print cont_counts
+print comp_counts
 
 
 
-
-
-
-
-
-
-# calculating contiguity
-
-# calculating completeness
