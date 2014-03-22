@@ -63,4 +63,4 @@ if __name__ == "__main__":
 
 # running blast with transcriptome data against reference database, report the result in the xml
 blastpcline = NcbiblastpCommandline(query=arglist['i'][0], db=arglist['db'][0], evalue=1e-10, outfmt=5, out=arglist['p'][0])
-print blastpcline
+stdout,stderr =  blastpcline()
