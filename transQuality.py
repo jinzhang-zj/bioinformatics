@@ -38,6 +38,7 @@ import os
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.Blast.Applications import NcbiblastxCommandline
+from Bio.Blast.Applications import NcbiblastpCommandline
 
 # the blast results will be in xml format since it's the most portable blast
 # results for different version of blast.
@@ -49,14 +50,17 @@ parser = argparse.ArgumentParser(
 
 if __name__ == "__main__":
 	# add arguments
-	parser.add_argument('-i', metavar='inputfile', nargs=1, type=argparse.FileType('r'), required=True, help='input assembly file')
+	parser.add_argument('-i', metavar='inputfile', nargs=1, required=True, help='input assembly file')
 	parser.add_argument('-db', metavar='refdatabase', nargs=1, required=True, help='reference database path/name')
 	parser.add_argument('-p', metavar='projectname', nargs=1, required=True, help='project name used to name the output files')
-
+	parser.add_argument('-e', metavar='evalue', nargs=1, default=1e-10, help='blast evalue')
+	parser.add_argument('-c', metavar='cutoff', nargs=1, default=0.8, help='cutoff for contiguity/completeness')
+		
 	args = parser.parse_args()	# take sys.args as default
 
 	# dictionary that stores all the arguments
 	arglist = vars(args)
 
-# running blast with transcriptome data against reference database
-
+# running blast with transcriptome data against reference database, report the result in the xml
+blastpcline = NcbiblastpCommandline(query=arglist['i'][0], db=arglist['db'][0], evalue=1e-10, outfmt=5, out=arglist['p'][0])
+print blastpcline
