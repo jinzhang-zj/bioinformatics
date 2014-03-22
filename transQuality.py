@@ -76,13 +76,20 @@ result_handle = open(arglist['p'][0]+'.blastp.out')
 blast_records = NCBIXML.parse(result_handle)
 
 cont=defaultdict(int)
+dbnum = 0;
+
+
 
 for blast_record in blast_records:
-	
 	# skip the query if not hit was found
+	
 
 	if not blast_record.alignments:
 		continue
+	
+	if not dbnum:
+		dbnum = blast_record.database_sequences
+		print dbnum
 
 	cur_query = blast_record.query
 	
@@ -104,7 +111,7 @@ for blast_record in blast_records:
 
 # contiguity output
 for cut in np.arange(0,1,0.1):
-	count = sum([1 for i in cont.values() if i > cut])
+	count = sum([1 for i in cont.values() if i > cut]) * 1.0 / dbnum
 	print str(cut) + ' ' + str(count)
 
 
