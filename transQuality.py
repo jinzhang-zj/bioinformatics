@@ -14,7 +14,7 @@ Version 0.1
 
 The output contains the blast results, and the contiguity/completeness.
 
-Currently version is only focusing on the translated assembly files.
+Currently version is only for on the translated assembly files.
 
 It is recommended to use a well annotated complete transcriptome data of 
 a species such as Arabidopsis as reference since contiguity/completeness
@@ -23,6 +23,9 @@ evaluate the quality of the transcriptome assembly in the sense of a
 
 The default cutoff for the blast is 1e-10, and the cutoff for the contiguity
 and completeness is 0.8.
+
+Prerequisite: local blast commands
+
 """
 
 __author__ = "Jin Zhang(zj@utexas.edu)"
