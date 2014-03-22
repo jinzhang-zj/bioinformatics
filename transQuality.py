@@ -37,6 +37,7 @@ import argparse
 import os
 from Bio import SeqIO
 from Bio.Seq import Seq
+from Bio.Blast.Applications import NcbiblastxCommandline
 
 # the blast results will be in xml format since it's the most portable blast
 # results for different version of blast.
@@ -49,12 +50,13 @@ parser = argparse.ArgumentParser(
 if __name__ == "__main__":
 	# add arguments
 	parser.add_argument('-i', metavar='inputfile', nargs=1, type=argparse.FileType('r'), required=True, help='input assembly file')
-	parser.add_argument('-d', metavar='refdatabase', nargs=1, help='reference database path/name')
-	parser.add_argument('-p', metavar='projectname', nargs=1, help='project name used to name the output files')
+	parser.add_argument('-db', metavar='refdatabase', nargs=1, required=True, help='reference database path/name')
+	parser.add_argument('-p', metavar='projectname', nargs=1, required=True, help='project name used to name the output files')
 
 	args = parser.parse_args()	# take sys.args as default
 
 	# dictionary that stores all the arguments
 	arglist = vars(args)
 
+# running blast with transcriptome data against reference database
 
