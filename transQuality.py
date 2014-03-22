@@ -38,8 +38,11 @@ __license__ = "Python"
 import sys
 import argparse
 import os
+import numpy as np
+from collections import defaultdict
 from Bio import SeqIO
 from Bio.Seq import Seq
+from Bio.Blast import NCBIXML
 from Bio.Blast.Applications import NcbiblastxCommandline
 from Bio.Blast.Applications import NcbiblastpCommandline
 
@@ -57,7 +60,6 @@ if __name__ == "__main__":
 	parser.add_argument('-db', metavar='refdatabase', nargs=1, required=True, help='reference database path/name')
 	parser.add_argument('-p', metavar='projectname', nargs=1, required=True, help='project name used to name the output files')
 	parser.add_argument('-e', metavar='evalue', nargs=1, default=1e-10, help='blast evalue')
-	parser.add_argument('-c', metavar='cutoff', nargs=1, default=0.8, help='cutoff for contiguity/completeness')
 		
 	args = parser.parse_args()	# take sys.args as default
 
@@ -65,5 +67,57 @@ if __name__ == "__main__":
 	arglist = vars(args)
 
 # running blast with transcriptome data against reference database, report the result in the xml
-blastpcline = NcbiblastpCommandline(query=arglist['i'][0], db=arglist['db'][0], evalue=1e-10, outfmt=5, out=arglist['p'][0])
+blastpcline = NcbiblastpCommandline(query=arglist['i'][0], db=arglist['db'][0], max_target_seqs=1, evalue=arglist['e'], outfmt=5, out=arglist['p'][0]+'.blastp.out')
 stdout,stderr =  blastpcline()
+
+
+# parsing the blast results
+result_handle = open(arglist['p'][0]+'.blastp.out')
+blast_records = NCBIXML.parse(result_handle)
+
+cont=defaultdict(int)
+
+for blast_record in blast_records:
+	
+	# skip the query if not hit was found
+
+	if not blast_record.alignments:
+		continue
+
+	cur_query = blast_record.query
+	
+	# each alignment corresponding to blast reuslts of one hit for the query
+	# here we are only interested in the top hit, or the first alignment results
+
+	alignment = blast_record.alignments[0]
+	cur_hit = alignment.title[:20]
+	cur_hit_length = alignment.length
+
+	# each hsp corresponds to blast results of one hsp of one hit for one query
+	# here we are only interested in the top hsp
+	hsp = alignment.hsps[0]
+	align_length = hsp.sbjct_end - hsp.sbjct_start + 1
+	tmp_cont = align_length * 1.0 / cur_hit_length
+	
+	if tmp_cont > cont[cur_hit]:
+		cont[cur_hit] = tmp_cont
+
+# contiguity output
+for cut in np.arange(0,1,0.1):
+	count = sum([1 for i in cont.values() if i > cut])
+	print str(cut) + ' ' + str(count)
+
+
+
+
+
+
+
+
+
+
+
+
+# calculating contiguity
+
+# calculating completeness
