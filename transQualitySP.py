@@ -2,6 +2,8 @@
 
 """A script to automatically evaluate the transcriptome assembly quality.
 
+This is an sequential implementation.
+
 The assembly quality was evaluated with metrics of contiguity
 and completeness.  Both of the metrics were defined in the paper:
 
