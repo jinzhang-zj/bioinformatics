@@ -34,8 +34,6 @@ __date__ = "$Date: 2014/03/21 23:19:15"
 __copyright__ = "Copyright: (c) 2014 Jin Zhang"
 __license__ = "Python"
 
-
-import sys
 import argparse
 import numpy as np
 from collections import defaultdict
@@ -63,30 +61,50 @@ if __name__ == "__main__":
 	# dictionary that stores all the arguments
 	arglist = vars(args)
 
+logfile = open(arglist['p'][0] + '.log','w')
+contfile = open(arglist['p'][0] + '_cont.out','w')
+compfile = open(arglist['p'][0] + '_comp.out','w')
+
+logfile.write("""This is script is used to evaluate contiguity/completeness with given transcriptome assembly.
+
+__author__ = "Jin Zhang(zj@utexas.edu)"
+__version__ = "$Version: 0.1 $"
+__date__ = "$Date: 2014/03/21 23:19:15"
+__copyright__ = "Copyright: (c) 2014 Jin Zhang"
+__license__ = "Python"
+
+""")
+
+logfile.write("running blast...\n")
+logfile.write("database: " + arglist['db'][0] + "\n")
 # running blast with transcriptome data against reference database, report the result in the xml
-blastpcline = NcbiblastpCommandline(query=arglist['i'][0], db=arglist['db'][0], max_target_seqs=1, evalue=arglist['e'], outfmt=5, out=arglist['p'][0]+'.blastp.out')
+blastpcline = NcbiblastpCommandline(query=arglist['i'][0], db=arglist['db'][0], max_target_seqs=1, evalue=arglist['e'], outfmt=5, out=arglist['p'][0]+'_blastp.out')
 stdout,stderr =  blastpcline()
+logfile.write("done...\n")
+logfile.write("database information: ")
 
 # parsing the blast results
-result_handle = open(arglist['p'][0]+'.blastp.out')
+result_handle = open(arglist['p'][0]+'_blastp.out')
 blast_records = NCBIXML.parse(result_handle)
 
-cont=defaultdict(int)		# record contiguity for each gene
-comp_seg=defaultdict(set)	# record aligned hsp start and end position pairs
+cont = defaultdict(int)		# record contiguity for each gene
+comp_seg = defaultdict(set)	# record aligned hsp start and end position pairs
 ref = {}			# record reference length
+cont_list = {}			# record the contig with highest aligned length to each reference gene
+comp_list = defaultdict(list)	# record the contigs aligned to each reference
+
+
 dbnum = 0;
 
 for blast_record in blast_records:
-	# skip the query if not hit was found
-	
-
-	if not blast_record.alignments:
-		continue
-	
 	if not dbnum:
 		dbnum = blast_record.database_sequences
-
-	cur_query = blast_record.query
+		logfile.write(str(dbnum) + " reference sequences\n")
+		logfile.write("\n\n" + "now parsing the blast results...\n")
+	
+	# skip the query if not hit was found
+	if not blast_record.alignments:
+		continue
 	
 	# each alignment corresponding to blast reuslts of one hit for the query
 	# we are only interested in the top hit, or the first alignment results
@@ -103,9 +121,11 @@ for blast_record in blast_records:
 	tmp_cont = align_length * 1.0 / ref[cur_hit]
 	if tmp_cont > cont[cur_hit]:
 		cont[cur_hit] = tmp_cont
+		cont_list[cur_hit] = blast_record.query
 
 	# for contiguity we are interested in all hsps over the evalue cutoff
 	# calculating completeness for each contig
+	comp_list[cur_hit].append(blast_record.query)
 	for hsp in alignment.hsps:
 		if hsp.expect > arglist['e']:
 			continue
@@ -113,11 +133,16 @@ for blast_record in blast_records:
 		comp_seg[cur_hit].add(tmp_tuple)
 
 
+logfile.write("parsing done.\n\n")
+logfile.write("summarizinging contiguity...\n")
 
 # summarize contiguity over all the references
 cont_counts = [0]*10
 for idx in range(10):
 	cont_counts[idx] = sum (1 for v in cont.values() if v*10 > idx) * 1.0/ dbnum
+
+logfile.write("done.\n\n")
+logfile.write("summarizinging completeness...\n")
 
 # summarize completeness over all the references
 comp = defaultdict(int)
@@ -136,8 +161,30 @@ comp_counts = [0]*10
 for idx in range(10):
 	comp_counts[idx] = sum (1 for v in comp.values() if v*10 > idx) * 1.0/ dbnum
 
+logfile.write("done.\n\n")
+logfile.write("writing results to the output files...\n")
+
 print cont_counts
 print comp_counts
 
+for gene in cont_list.keys():
+	contfile.write(" ".join(gene.split()[1:]) + "\t" + str(cont[gene]) + "\t" + cont_list[gene] + "\n")
 
+#contfile.write(cont_counts)
+#contfile.write("\n")
 
+for gene in comp_list.keys():
+	compfile.write(" ".join(gene.split()[1:]) + "\t" + str(comp[gene]) + "\t")
+	for i in range(len(comp_list[gene]) - 1):
+		compfile.write(comp_list[gene][i] + ",")
+	compfile.write(comp_list[gene][-1] + "\n")
+
+#compfile.write(comp_counts)
+#compfile.write("\n")
+logfile.write("done.\n")
+logfile.write("all done.\n")
+logfile.write("Goodbye!\n")
+
+logfile.close()
+contfile.close()
+compfile.close()
