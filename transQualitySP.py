@@ -12,7 +12,12 @@ database name (protein database).
 
 Version 0.1
 
-The output contains the blast results, and the contiguity/completeness.
+The output contains:
+blast results,    project_blast[x|p].out
+contiguity,	  project_cont.out
+completeness,	  project_comp.out
+log,	 	  project.log
+summary,	  project.summary
 
 Currently version is only for on the translated assembly files.
 
@@ -34,12 +39,14 @@ __date__ = "$Date: 2014/03/21 23:19:15"
 __copyright__ = "Copyright: (c) 2014 Jin Zhang"
 __license__ = "Python"
 
+import time
 import argparse
 import numpy as np
 from collections import defaultdict
 from Bio.Blast import NCBIXML
 from Bio.Blast.Applications import NcbiblastpCommandline
 
+start = time.time()
 # the blast results will be in xml format since it's the most portable blast
 # results for different version of blast.
 
@@ -54,7 +61,6 @@ if __name__ == "__main__":
 	parser.add_argument('-db', metavar='refdatabase', nargs=1, required=True, help='reference database path/name')
 	parser.add_argument('-p', metavar='projectname', nargs=1, required=True, help='project name used to name the output files')
 	parser.add_argument('-e', metavar='evalue', nargs=1, default=1e-10, help='blast evalue')
-	parser.add_argument('-cpu', metavar='cpu numbers', nargs=1, default=1, help='number of cores(threads) you want to use')
 		
 	args = parser.parse_args()	# take sys.args as default
 
@@ -64,6 +70,7 @@ if __name__ == "__main__":
 logfile = open(arglist['p'][0] + '.log','w')
 contfile = open(arglist['p'][0] + '_cont.out','w')
 compfile = open(arglist['p'][0] + '_comp.out','w')
+sumfile = open(arglist['p'][0] + '.summary','w')
 
 logfile.write("""This is script is used to evaluate contiguity/completeness with given transcriptome assembly.
 
@@ -100,7 +107,7 @@ for blast_record in blast_records:
 	if not dbnum:
 		dbnum = blast_record.database_sequences
 		logfile.write(str(dbnum) + " reference sequences\n")
-		logfile.write("\n\n" + "now parsing the blast results...\n")
+		logfile.write("\n" + "now parsing the blast results...\n")
 	
 	# skip the query if not hit was found
 	if not blast_record.alignments:
@@ -110,7 +117,7 @@ for blast_record in blast_records:
 	# we are only interested in the top hit, or the first alignment results
 
 	alignment = blast_record.alignments[0]
-	cur_hit = alignment.title
+	cur_hit = " ".join(alignment.title.split()[1:])	# remove additional index formated by the database
 	ref[cur_hit] = alignment.length
 
 	# each hsp corresponds to blast results of one hsp of one hit for one query
@@ -168,23 +175,28 @@ print cont_counts
 print comp_counts
 
 for gene in cont_list.keys():
-	contfile.write(" ".join(gene.split()[1:]) + "\t" + str(cont[gene]) + "\t" + cont_list[gene] + "\n")
-
-#contfile.write(cont_counts)
-#contfile.write("\n")
+	contfile.write(gene + "\t" + str(cont[gene]) + "\t" + cont_list[gene] + "\n")
 
 for gene in comp_list.keys():
-	compfile.write(" ".join(gene.split()[1:]) + "\t" + str(comp[gene]) + "\t")
+	compfile.write(gene + "\t" + str(comp[gene]) + "\t")
 	for i in range(len(comp_list[gene]) - 1):
 		compfile.write(comp_list[gene][i] + ",")
 	compfile.write(comp_list[gene][-1] + "\n")
 
-#compfile.write(comp_counts)
-#compfile.write("\n")
+sumfile.write(" ".join(map(str, cont_counts)))
+sumfile.write("\n")
+sumfile.write(" ".join(map(str, comp_counts)))
+sumfile.write("\n")
+
+timecost = time.time() - start
 logfile.write("done.\n")
-logfile.write("all done.\n")
+logfile.write("all done. Took " + str(timecost) + " seconds\n")
 logfile.write("Goodbye!\n")
+
+
+
 
 logfile.close()
 contfile.close()
 compfile.close()
+sumfile.close()
