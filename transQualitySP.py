@@ -2,7 +2,8 @@
 
 """A script to automatically evaluate the transcriptome assembly quality.
 
-This is an sequential implementation.
+The blast using multithreading and the following steps is calculated 
+sequentially.
 
 The assembly quality was evaluated with metrics of contiguity
 and completeness.  Both of the metrics were defined in the paper:
@@ -87,7 +88,7 @@ __license__ = "Python"
 logfile.write("running blast...\n")
 logfile.write("database: " + arglist['db'][0] + "\n")
 # running blast with transcriptome data against reference database, report the result in the xml
-blastpcline = NcbiblastpCommandline(query=arglist['i'][0], db=arglist['db'][0], max_target_seqs=1, evalue=arglist['e'], outfmt=5, out=arglist['p'][0]+'_blastp.out')
+blastpcline = NcbiblastpCommandline(query=arglist['i'][0], db=arglist['db'][0], max_target_seqs=1, evalue=arglist['e'], num_threads=16,outfmt=5, out=arglist['p'][0]+'_blastp.out')
 stdout,stderr =  blastpcline()
 logfile.write("done...\n")
 logfile.write("database information: ")
