@@ -7,8 +7,6 @@ the obstacles via Q learning.
 The input is (a,b) defining the size of the sidewalk, x
 specify the random start position (row) at column 0.
 
-The output is the number of steps taken to reach any position
-at column b.
 """
 
 __author__ = "Jin Zhang"
@@ -376,7 +374,7 @@ class Agent:
         if state[action] == 1:        # obstacle
             return -10
         elif state[action] == 2:      # wall
-            return 0                # Note: we can tolerate steping on obstacle and prefer not to keep bumping on the wall
+            return 0               
         else:
             return 5
 
