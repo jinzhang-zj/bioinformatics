@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/opt/apps/python/epd/7.3.2/bin/python
 
 """Translate the transcriptome assemblies use Biopython.
 
@@ -8,8 +8,7 @@ the normal translated contigs, the translated contigs with fixed
 frame shift or fragmentation, and the putative CDS.
 
 The input is a file containing all the assembled coding sequences, 
-and a blastx results of the contigs sequences to the reference in xml 
-format.
+and a referece (protein) database you want to use for blast.
 
 Version 1.0
 
@@ -32,7 +31,7 @@ head.
 The summary file reports the blast hit chosen, reading frame of first hsp,
 used hsps, 5' and 3' extension on the final cds.
 
-Differences with script from Dr. Mikhail Matz. (If anyone is interested)
+Differences with script from Dr. Mikhail Matz. (If anyone's interested)
 ---------------------------------------------------------------------------------
 Problems:				my_solution / Matz's solution
 
@@ -58,6 +57,10 @@ Modification: 2013-03-27  9:56:15
 Add try/catch for the case that none of alignment scores of the hits are higher than
 the abribtrary threshold, in this case we'll skip this query.
 
+Modification: 2014-06-03  17:11:00
+Add timing function for evaluation of computational performance, and fix a bug in not 
+skiping the contigs with hits named "unknown/predicted/hypothetical".
+
 Change the order of script, so there's no hit for the query or none of alignment scores
 of the hits are higher than the arbitrary threshold, the query won't be translated in
 six open reading frame.
@@ -75,8 +78,9 @@ import os
 from Bio import SeqIO
 from Bio.Blast import NCBIXML
 from Bio.Seq import Seq
+import time
 
-# although xml is not the most human readable file format of blast results
+# although xml is not the easiest human readable file format of blast results
 # its overall structure remain stable cross different blast versions, and we
 # will only take xml format in our script.
 
@@ -97,6 +101,10 @@ University of Texas at Austin
 zj@utexas.edu
 Nov 2012
 ''')
+
+
+starttime = time.time()
+
 
 qseqs = {}
 skip_pattern = re.compile('hypothetical|predicted|unnamed|unknown', re.I)
@@ -136,6 +144,7 @@ for blast_record in blast_records:
 	seq_length = len(qseq)
 	cds_seq = ''
 	pep_seq = ''
+	raw_hit = ''
 	
 	# skip this query if there's not hit
 	if not blast_record.alignments:
@@ -162,13 +171,17 @@ for blast_record in blast_records:
 			raw_hit = alignment
 
 	# If there's hit for this contig but none of them pass the alignment score threshold, we shall also skip this contig
-	try:
-		raw_hit
-	except NameError:
+	if not raw_hit:
 		continue
 
 	raw_region = sorted([str(hsp.query_start) + '-' + str(hsp.query_end) for hsp in raw_hit.hsps])	# all hsps
 
+
+	# filter those low quality hsps
+	best_hit = [hsp for hsp in raw_hit.hsps if hsp.expect < ecut]	
+
+	if len(best_hit) == 0:
+		continue
 
 	# translate the sequences in all six reading frame
 	com_file.write('>' + cur_query + ' frame 1\n')
@@ -183,13 +196,6 @@ for blast_record in blast_records:
 	com_file.write(qseq.reverse_complement()[1:].translate().tostring() + '\n')
 	com_file.write('>' + cur_query + ' frame -3\n')
 	com_file.write(qseq.reverse_complement()[2:].translate().tostring() + '\n')
-
-
-	# filter those low quality hsps
-	best_hit = [hsp for hsp in raw_hit.hsps if hsp.expect < ecut]	
-
-	if len(best_hit) == 0:
-		continue
 
 	# find the subject start in the best alignment
 	sub_start = 9999
@@ -391,31 +397,25 @@ for blast_record in blast_records:
 			if cur_codon == 'TAA' or cur_codon == 'TAG' or cur_codon == 'TGA':
 				break
 			
-		#end += 3	# discard the last 3 problematic bases
-
 		if start != qe:
 			fextend = (startm == -1) and qseq[qe : start].reverse_complement().lower() or qseq[qe : startm].reverse_complement().lower()
 			cds_seq = fextend.tostring() + cds_seq
 			pep_seq = fextend.translate().tostring().lower() + pep_seq
-			# cur_query += ' extends: 5\' ' + str(len(fextend)) + 'bp'
 			
 		if end != qs - 1:
 			bextend = qseq[end : qs - 1].reverse_complement().lower()
 			cds_seq += bextend.tostring()
 			pep_seq += bextend.translate().tostring().lower()
-			# cur_query += ' extends: 3\' ' + str(len(bextend)) + 'bp'
 
 	cds_file.write('>' + cur_query + " hsps: ")
 	cds_file.write(' '.join(hsp for hsp in hsp_region))
 	cds_file.write(', extends: 5\' '+ str(len(fextend))+ 'bp' )
-	cds_file.write(' 3\' ' + str(len(bextend)) + 'bp')
-	cds_file.write('\n')
+	cds_file.write(' 3\' ' + str(len(bextend)) + 'bp\n')
 	cds_file.write(cds_seq + '\n')
 
 	pep_file.write('>' + cur_query + ' translated')
 	pep_file.write(' extends: N '+ str(len(fextend)/3)+ 'aa' )
-	pep_file.write(' C ' + str(len(bextend)/3) + 'aa')
-	pep_file.write('\n')
+	pep_file.write(' C ' + str(len(bextend)/3) + 'aa\n')
 	pep_file.write(pep_seq+"\n")
 
 	sum_file.write('----------------------------------\n');
@@ -442,6 +442,10 @@ for blast_record in blast_records:
 	sum_file.write('5\' extension: ' + str(len(fextend)/3) + ' codons\n')
 	sum_file.write('3\' extension: ' + str(len(bextend)/3) + ' codons\n')
 	sum_file.write('in frame stop codons: ' + str(pep_seq.count('*')) + '\n')
+
+timecost = time.time() - starttime
+print "timecost: " + str(timecost) + " seconds\n"
+
 cds_file.close()
 pep_file.close()
 sum_file.close()
