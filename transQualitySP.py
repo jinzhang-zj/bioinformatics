@@ -196,9 +196,6 @@ logfile.write("done.\n")
 logfile.write("all done. Took " + str(timecost) + " seconds\n")
 logfile.write("Goodbye!\n")
 
-
-
-
 logfile.close()
 contfile.close()
 compfile.close()

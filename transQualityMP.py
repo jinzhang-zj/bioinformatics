@@ -2,7 +2,7 @@
 
 """A script to automatically evaluate the transcriptome assembly quality.
 
-This is an sequential implementation.
+This is a multiprocessing implementation.
 
 The assembly quality was evaluated with metrics of contiguity
 and completeness.  Both of the metrics were defined in the paper:
@@ -63,6 +63,7 @@ if __name__ == "__main__":
 	parser.add_argument('-db', metavar='refdatabase', nargs=1, required=True, help='reference database path/name')
 	parser.add_argument('-p', metavar='projectname', nargs=1, required=True, help='project name used to name the output files')
 	parser.add_argument('-e', metavar='evalue', nargs=1, default=1e-10, help='blast evalue')
+	parser.add_argument('-n', metavar='number of threads', nargs=1, default=1e-10, help='number of threads you want to use, recommended to be the number of cores you can use ')
 		
 	args = parser.parse_args()	# take sys.args as default
 
@@ -78,7 +79,7 @@ logfile.write("""This is script is used to evaluate contiguity/completeness with
 
 __author__ = "Jin Zhang(zj@utexas.edu)"
 __version__ = "$Version: 0.1 $"
-__date__ = "$Date: 2014/03/21 23:19:15"
+__date__ = "$Date: 2014/03/22 23:32:15"
 __copyright__ = "Copyright: (c) 2014 Jin Zhang"
 __license__ = "Python"
 
@@ -87,7 +88,7 @@ __license__ = "Python"
 logfile.write("running blast...\n")
 logfile.write("database: " + arglist['db'][0] + "\n")
 # running blast with transcriptome data against reference database, report the result in the xml
-blastpcline = NcbiblastpCommandline(query=arglist['i'][0], db=arglist['db'][0], max_target_seqs=1, evalue=arglist['e'], outfmt=5, out=arglist['p'][0]+'_blastp.out')
+blastpcline = NcbiblastpCommandline(query=arglist['i'][0], db=arglist['db'][0], max_target_seqs=1, num_threads=arglist['n'], evalue=arglist['e'], outfmt=5, out=arglist['p'][0]+'_blastp.out')
 stdout,stderr =  blastpcline()
 logfile.write("done...\n")
 logfile.write("database information: ")
@@ -106,7 +107,7 @@ comp_list = defaultdict(list)	# record the contigs aligned to each reference
 dbnum = 0;
 
 for blast_record in blast_records:
-	if not dbnum:
+	if not dbnum
 		dbnum = blast_record.database_sequences
 		logfile.write(str(dbnum) + " reference sequences\n")
 		logfile.write("\n" + "now parsing the blast results...\n")
@@ -194,9 +195,6 @@ timecost = time.time() - start
 logfile.write("done.\n")
 logfile.write("all done. Took " + str(timecost) + " seconds\n")
 logfile.write("Goodbye!\n")
-
-
-
 
 logfile.close()
 contfile.close()
