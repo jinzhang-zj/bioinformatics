@@ -432,8 +432,8 @@ if __name__ == "__main__":
 	com_file = open(str(file) + '_complete.faa', 'w')	# translation of all six reading frame
 
 	# running blastx to identify the reading frame
-	#blastxcline = NcbiblastxCommandline(query=sys.argv[1], db=sys.argv[2], max_target_seqs=1, num_threads=sys.argv[3],evalue=1e-5, outfmt=5, out=file+".blastx.out")
-	#stdout, stderr = blastxcline()
+	blastxcline = NcbiblastxCommandline(query=sys.argv[1], db=sys.argv[2], max_target_seqs=10, num_threads=sys.argv[3],evalue=1e-5, outfmt=5, out=file+".blastx.out")
+	stdout, stderr = blastxcline()
 
 	blasttime = time.time() - start
 
