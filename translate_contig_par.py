@@ -62,8 +62,9 @@ from Bio import SeqIO
 from Bio.Blast import NCBIXML
 from Bio.Seq import Seq
 from Bio.Blast.Applications import NcbiblastxCommandline
-from multiprocessing import Pool, Manager
+from multiprocessing import Pool
 import time
+#import math
 
 # although xml is not the easiest human readable file format of blast results
 # its overall structure remain stable cross different blast versions, and we
@@ -406,6 +407,9 @@ def processBlast ((blast_record, qseq, cur_query)):
 	sumOut += '5\' extension: ' + str(len(fextend)/3) + ' codons\n'
 	sumOut += '3\' extension: ' + str(len(bextend)/3) + ' codons\n'
 	sumOut += 'in frame stop codons: ' + str(pep_seq.count('*')) + '\n'
+
+
+	#rout = reduce(lambda a, b: math.log(a+b), xrange(10**5))
 	
 	return (comOut, cdsOut, pepOut, sumOut)
 
@@ -440,14 +444,15 @@ if __name__ == "__main__":
 	# process each blast results
 	results = []
 	pool = Pool(processes=int(sys.argv[3]))
+	print "Using " + sys.argv[3] + " processes"
 	myItr = inputItr(blast_records, qseqs)
-	r = pool.map_async(processBlast, myItr, callback=results.append)
+	r = pool.map_async(processBlast, myItr, callback=results.extend)
 	r.wait()
 
 	processtime = time.time() - start - blasttime
 
 	# write the results into corresponding files
-	for result in results[0]:
+	for result in results:
 		if result:
 			com_file.write(result[0])
 			cds_file.write(result[1])
