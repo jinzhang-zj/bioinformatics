@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-"""Calculated given genome repeat content and repeat distribution(optional).
+"""Calculated given genome repeat content/number/distribution.
 
 The input is given a genome sequence in fasta format. If the genome contains IR,
 it must be removed.
