@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-"""Calculated given genome repeat content/number/distribution.
+"""Calculated given genome repeat content/number/distribution with BLAST.
 
 The input is given a genome sequence in fasta format. If the genome contains IR,
 it must be removed.
@@ -60,7 +60,7 @@ def calc_repeat(infile,dbname,num):
 					continue
 				else:
 					# mask the genome based on query alignment
-					genome_mask[hsp.query_start-1:hsp.query_end-1]  = [1] * (hsp.query_end - hsp.query_start + 1)
+					genome_mask[hsp.query_start-1:hsp.query_end]  = [1] * (hsp.query_end - hsp.query_start + 1)
 
 					# identify the record by query start/end and hit start/end coordinates
 					lhs = str(hsp.query_start) + "-" + str(hsp.query_end)
@@ -80,7 +80,7 @@ def calc_repeat(infile,dbname,num):
 					repeat_groups[idx] = hsp.align_length
 					repeat_length.append(hsp.query_end - hsp.query_start)
 
-	repeat_content = sum(genome_mask)*1.0/genome_length
+	repeat_content = sum(genome_mask) * 1.0 / genome_length
 	return repeat_content,repeat_groups,repeat_length
 	
 
@@ -110,8 +110,8 @@ if __name__ == "__main__":
 
 	print "repeat content: ", result[0]
 	print "number of repeat pairs: ", len(result[1])
+	print "repeat distribution: ", result[2]
+	print "\n"
 
-	plt.hist(result[2],bins=10)
-	plt.savefig(species+"_repeats.png")
 
 
